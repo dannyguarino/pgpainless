@@ -24,6 +24,8 @@ import java.util.Date;
 import java.util.List;
 
 import org.bouncycastle.bcpg.sig.IssuerKeyID;
+import javax.annotation.Nonnull;
+
 import org.bouncycastle.bcpg.sig.KeyExpirationTime;
 import org.bouncycastle.bcpg.sig.RevocationReason;
 import org.bouncycastle.bcpg.sig.SignatureExpirationTime;
@@ -38,9 +40,9 @@ import org.bouncycastle.openpgp.PGPSignatureGenerator;
 import org.bouncycastle.openpgp.PGPSignatureList;
 import org.bouncycastle.openpgp.operator.PGPContentSignerBuilder;
 import org.bouncycastle.util.encoders.Hex;
-import org.pgpainless.PGPainless;
 import org.pgpainless.algorithm.HashAlgorithm;
 import org.pgpainless.algorithm.SignatureType;
+import org.pgpainless.algorithm.negotiation.HashAlgorithmNegotiator;
 import org.pgpainless.implementation.ImplementationFactory;
 import org.pgpainless.key.OpenPgpV4Fingerprint;
 import org.pgpainless.key.util.OpenPgpKeyAttributeUtil;
@@ -94,7 +96,7 @@ public final class SignatureUtils {
      * @param publicKey public key
      * @return content signer builder
      */
-    private static PGPContentSignerBuilder getPgpContentSignerBuilderForKey(PGPPublicKey publicKey) {
+    public static PGPContentSignerBuilder getPgpContentSignerBuilderForKey(PGPPublicKey publicKey) {
         List<HashAlgorithm> preferredHashAlgorithms = OpenPgpKeyAttributeUtil.getPreferredHashAlgorithms(publicKey);
         if (preferredHashAlgorithms.isEmpty()) {
             preferredHashAlgorithms = OpenPgpKeyAttributeUtil.guessPreferredHashAlgorithms(publicKey);
@@ -111,15 +113,9 @@ public final class SignatureUtils {
      * @param preferredHashAlgorithms list of preferred hash algorithms of a key
      * @return first acceptable algorithm, or policies default hash algorithm
      */
-    private static HashAlgorithm negotiateHashAlgorithm(List<HashAlgorithm> preferredHashAlgorithms) {
-        Policy policy = PGPainless.getPolicy();
-        for (HashAlgorithm option : preferredHashAlgorithms) {
-            if (policy.getSignatureHashAlgorithmPolicy().isAcceptable(option)) {
-                return option;
-            }
-        }
-
-        return PGPainless.getPolicy().getSignatureHashAlgorithmPolicy().defaultHashAlgorithm();
+    private static HashAlgorithm negotiateHashAlgorithm(@Nonnull List<HashAlgorithm> preferredHashAlgorithms) {
+        HashAlgorithmNegotiator negotiator = HashAlgorithmNegotiator.defaultNegotiator();
+        return negotiator.negotiateHashAlgorithm(preferredHashAlgorithms);
     }
 
     /**
